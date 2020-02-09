@@ -13,6 +13,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import missingno as mn
 from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 sns.set(style="whitegrid")
 flatui = ["#9b59b6", "#3498db", "#95a5a6", "#e74c3c", "#34495e", "#2ecc71"]
@@ -20,8 +21,14 @@ sns.set_palette(flatui)
 
 def summary(df):
     pd.set_option('display.max_columns', 500)
-    print(df.describe(include=[np.number]), '\n')
-    print(df.describe(exclude=[np.number]))
+    try:
+        print(df.describe(include=[np.number]), '\n')
+    except ValueError:
+        print('', end='')
+    try:
+        print(df.describe(exclude=[np.number]))
+    except ValueError:
+        print('', end='')
     pd.set_option('display.max_columns', 5)
 
 def head(df, full=True):
@@ -68,6 +75,11 @@ def boxplot(df, x=None, y=None, hue=None):
         sns.boxplot(data=tmp_df, orient='h')
     else:
         sns.boxplot(x, y, hue=hue, data=df)
+
+def correlation_matrix(df, figsize=(10, 10)):
+    fig, ax = plt.subplots(figsize=figsize)
+    sns.heatmap(df.corr(), vmax=1.0, center=0, fmt='.2f', square=True, linewidths=.5, annot=True, cbar_kws={"shrink": .70})
+    plt.show()
 
 def n():
     print('\n')
@@ -118,3 +130,33 @@ def fill_missing(df, cols='all', strategy='median'):
         imputed_df = pd.DataFrame(imputer.fit_transform(df[cols]))
         df[cols] = imputed_df.values
         return df
+
+def normalize(df, scaler, cols='all'):
+    if cols == 'all':
+        scaled_df = pd.DataFrame(scaler.fit_transform(df))
+        scaled_df.columns = df.columns
+        scaled_df.index = df.index
+        return scaled_df
+    elif cols == 'numeric':
+        cols = df.select_dtypes([np.number]).columns
+        scaled_df = pd.DataFrame(scaler.fit_transform(df[cols]))
+        df[cols] = scaled_df.values
+        return df
+    else:
+        scaled_df = pd.DataFrame(scaler.fit_transform(df[cols]))
+        df[cols] = scaled_df.values
+        return df
+
+def standardize(df, cols='all'):
+    return normalize(df, StandardScaler(), cols)
+
+def scale(df, cols='all'):
+    return normalize(df, MinMaxScaler(), cols)
+
+def categorical_features(df, cols):
+    for c in cols:
+        print(c)
+        print(df[c].value_counts(), '\n')
+
+def encode_categorical_features(df, cols, drop_first=False):
+    return pd.get_dummies(df, columns=cols, drop_first=drop_first)
